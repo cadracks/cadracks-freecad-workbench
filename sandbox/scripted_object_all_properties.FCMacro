@@ -1,0 +1,412 @@
+# coding: utf-8
+
+r"""Examples for a feature class and its view provider.
+
+You can only add properties to existing objects if they are derived from FeaturePython.
+Otherwise they don't have an addProperty() method.
+You can check with:
+- myObj.isDerivedFrom("Part::FeaturePython")
+or
+- myObj.isDerivedFrom("App::FeaturePython")
+
+"""
+
+import FreeCAD
+# import FreeCADGui
+from pivy import coin
+
+
+class Boat:
+    r"""The PythonFeature a.k.a the Python scripted object"""
+    def __init__(self, obj):
+        r"""Add some custom properties to our Boat feature"""
+
+        # These will be used by the ViewProvider
+        obj.addProperty("App::PropertyLength",
+                        "Length",
+                        "Boat",
+                        "Length of the Boat").Length = 10000.0
+        obj.addProperty("App::PropertyLength",
+                        "Width",
+                        "Boat",
+                        "Width of the Boat").Width = 2000.0
+        obj.addProperty("App::PropertyLength",
+                        "Height",
+                        "Boat",
+                        "Height of the Boat").Height = 1500.0
+
+        # ---- Booleans ----
+        obj.addProperty("App::PropertyBool",
+                        "IsCool", "Booleans",
+                        "Is it cool?").IsCool = True
+        # NOT APPEARING IN PROPERTIES
+        obj.addProperty("App::PropertyBoolList",
+                        "AreCool",
+                        "Booleans",
+                        "Are they cool?").AreCool = [True, False, True]
+
+        # ---- Floats ----
+        obj.addProperty("App::PropertyFloat",
+                        "CaptainAge",
+                        "Floats",
+                        "Captain age").CaptainAge = 38.5
+        obj.addProperty("App::PropertyFloatList",
+                        "BoatBearings",
+                        "Floats",
+                        "Boat bearings").BoatBearings = [90., 180., 270.]
+        # Constraints ->  (value, lowerbound, upperbound, stepsize)
+        obj.addProperty("App::PropertyFloatConstraint",
+                        "CurrentBearing",
+                        "Floats",
+                        "The current bearing").CurrentBearing = \
+            (181., 0, 359.9, 0.1)
+
+        # ---- Quantities ----
+        # Quantity -> base class for other types of properties?
+        obj.addProperty("App::PropertyQuantity",
+                        "NumberOfApples",
+                        "Quantities",
+                        "Number of apples on board").NumberOfApples = -8
+        obj.addProperty("App::PropertyQuantityConstraint",
+                        "BoundNumberOfApples",
+                        "Quantities",
+                        "Bound number of apples on board")
+
+        # ---- Physical values ----
+        obj.addProperty("App::PropertyAngle",
+                        "SunAngle",
+                        "Physical values",
+                        "Sun-horizon angle").SunAngle = 30.2
+        # auto converted from mm to m in the property editor
+        # how to specify the unit directly ?
+        obj.addProperty("App::PropertyDistance",
+                        "DistanceToSail",
+                        "Physical values",
+                        "Distance to the next harbour").DistanceToSail = 300000.
+        obj.addProperty("App::PropertyLength",
+                        "ShipLength",
+                        "Physical values",
+                        "Ship length from transom to bow").ShipLength = 50000.
+        obj.addProperty("App::PropertySpeed",
+                        "BoatSpeed",
+                        "Physical values",
+                        "Boat speed over ground").BoatSpeed = 4000.
+        obj.addProperty("App::PropertyAcceleration",
+                        "BoatAcceleration",
+                        "Physical values",
+                        "Boat acceleration").BoatAcceleration = 0.
+        obj.addProperty("App::PropertyForce",
+                        "Resistance",
+                        "Physical values",
+                        "Resistance").Resistance = 400.
+        obj.addProperty("App::PropertyPressure",
+                        "AtmosphericPressure",
+                        "Physical values",
+                        "Atmospheric pressure").AtmosphericPressure = 101.5
+
+        # ---- Integers ----
+        obj.addProperty("App::PropertyInteger",
+                        "NumberOfCrewMembers",
+                        "Integers",
+                        "How many crew members?").NumberOfCrewMembers = 17
+        obj.addProperty("App::PropertyIntegerConstraint",
+                        "BoundNumberOfCrewMembers",
+                        "Integers",
+                        "Bound nb of crew members").BoundNumberOfCrewMembers = \
+            (17, 1, 25, 2)
+        obj.addProperty("App::PropertyIntegerList",
+                        "ApplesAndOranges",
+                        "Integers",
+                        "Nb of apples and oranges").ApplesAndOranges = [10, 12]
+        # NOT APPEARING IN PROPERTIES
+        obj.addProperty("App::PropertyIntegerSet",
+                        "Positive0to10",
+                        "Integers",
+                        "Positive integers from 0 to 10").Positive0to10 = \
+            [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+        # ---- Special ----
+        # Setting above 100 will be brought back to 100
+        # integer percentages only
+        obj.addProperty("App::PropertyPercent",
+                        "FuelReserve",
+                        "Special",
+                        "Remaining fuel percentage").FuelReserve = 101
+        obj.addProperty("App::PropertyEnumeration",
+                        "SailingMode",
+                        "Special",
+                        "The sailing mode").SailingMode = ["Stopped",
+                                                           "Cruising",
+                                                           "Racing"]
+        # NOT APPEARING IN PROPERTIES
+        obj.addProperty("App::PropertyMap",
+                        "Map",
+                        "Special",
+                        "A map").Map = {'a': '1', 'b': '2'}
+        # NOT APPEARING IN PROPERTIES
+        import uuid
+        obj.addProperty("App::PropertyUUID",
+                        "BoatUniqueId",
+                        "Special",
+                        "A unique identifier").BoatUniqueId = str(uuid.uuid4())
+
+        # ---- Strings ----
+        obj.addProperty("App::PropertyString",
+                        "CaptainName",
+                        "Strings",
+                        "The captain name").CaptainName = "Joe"
+        obj.addProperty("App::PropertyStringList",
+                        "CrewNames",
+                        "Strings",
+                        "The crew names").CrewNames = ["Joe", "Jack", "William",
+                                                       "John Jones"]
+
+        # ---- Appearance ----
+        obj.addProperty("App::PropertyFont",
+                        "BoatNameFont",
+                        "Appearance",
+                        "The font to paint the name").BoatNameFont = "Arial"
+        obj.addProperty("App::PropertyColor",
+                        "HullColor",
+                        "Appearance",
+                        "The hull color").HullColor = (1., 1., 1.)
+        # NOT APPEARING IN PROPERTIES
+        obj.addProperty("App::PropertyColorList",
+                        "DeckColors",
+                        "Appearance",
+                        "The deck colors").DeckColors = [(1., 1., 1.),
+                                                         (0., 0., 0.)]
+
+        # ---- Links ----
+        # link to any kind of FreeCAD object ?
+        obj.addProperty("App::PropertyLink",
+                        "Link",
+                        "Links",
+                        "A link")
+        # NOT APPEARING IN PROPERTIES
+        obj.addProperty("App::PropertyLinkSub",
+                        "LinkSub",
+                        "Links",
+                        "A link sub")
+        # link to a list made of any kind of FreeCAD object
+        obj.addProperty("App::PropertyLinkList",
+                        "LinkList",
+                        "Links",
+                        "A link list")
+        # NOT APPEARING IN PROPERTIES
+        obj.addProperty("App::PropertyLinkSubList",
+                        "LinkSubList",
+                        "Links",
+                        "A link sub list")
+
+        # Matrices and vectors
+        obj.addProperty("App::PropertyMatrix",
+                        "Matrix",
+                        "Matrices and vectors",
+                        "A matrix")
+        obj.addProperty("App::PropertyVector",
+                        "Vector",
+                        "Matrices and vectors",
+                        "A vector")
+        # NOT APPEARING IN PROPERTIES
+        obj.addProperty("App::PropertyVectorList",
+                        "VectorList",
+                        "Matrices and vectors",
+                        "A vector list")
+
+        # ---- Placements ----
+        obj.addProperty("App::PropertyPlacement",
+                        "Placement",
+                        "Placements",
+                        "A placement")
+        obj.addProperty("App::PropertyPlacementLink",
+                        "PlacementLink",
+                        "Placements",
+                        "A placement link")
+
+        # ---- Materials ----
+        # NOT APPEARING IN PROPERTIES
+        obj.addProperty("App::PropertyMaterial",
+                        "Material",
+                        "Materials",
+                        "The material it is made of")
+
+        # ---- Paths and files ----
+        # path only goes to folder level
+        obj.addProperty("App::PropertyPath",
+                        "Path",
+                        "Paths and files",
+                        "A path")
+        obj.addProperty("App::PropertyFile", "File",
+                        "Paths and files",
+                        "A file")
+        # This property doesn't only save the file name like PropertyFile
+        # it also includes the file itself into the document
+        obj.addProperty("App::PropertyFileIncluded", "FileIncluded",
+                        "Paths and files",
+                        "A file included")
+
+        # ---- Python ----
+        # NOT APPEARING IN PROPERTIES
+        obj.addProperty("App::PropertyPythonObject", "PythonObject",
+                        "Python",
+                        "A python object")
+
+        # ---- Part ----
+        # NOTHING FROM Part:: APPEARING IN PROPERTIES
+        obj.addProperty("Part::PropertyPartShape", "PartShape",
+                        "Part",
+                        "A part shape")
+        obj.addProperty("Part::PropertyGeometryList", "GeometryList",
+                        "Part",
+                        "A geometry list")
+        obj.addProperty("Part::PropertyShapeHistory", "ShapeHistory",
+                        "Part",
+                        "A shape history")
+        obj.addProperty("Part::PropertyFilletEdges", "FilletEdges",
+                        "Part",
+                        "A fillet edges")
+
+        # ---- Sketecher ----
+        # not editable in properties
+        obj.addProperty("Sketcher::PropertyConstraintList", "ConstraintList",
+                        "Sketcher",
+                        "A sketcher constraint list")
+
+        obj.Proxy = self
+   
+    def onChanged(self, fp, prop):
+        r"""Do something when a property has changed"""
+        FreeCAD.Console.PrintMessage("Change property: " + str(prop) + "\n")
+ 
+    def execute(self, fp):
+        r"""Do something when doing a recomputation, this method is mandatory"""
+        FreeCAD.Console.PrintMessage("Recompute Python Boat feature\n")
+
+
+class ViewProviderBoat:
+    def __init__(self, obj):
+        r"""Set this object to the proxy object of the actual view provider"""
+        obj.addProperty("App::PropertyColor",
+                        "Color",
+                        "Boat",
+                        "Color of the boat").Color = (0.0, 0.0, 1.0)
+        obj.Proxy = self
+ 
+    def attach(self, obj):
+        r"""Setup the scene sub-graph of the view provider,
+        this method is mandatory
+        """
+        self.shaded = coin.SoGroup()
+        self.wireframe = coin.SoGroup()
+        self.scale = coin.SoScale()
+        self.color = coin.SoBaseColor()
+       
+        data = coin.SoCube()
+        self.shaded.addChild(self.scale)
+        self.shaded.addChild(self.color)
+        self.shaded.addChild(data)
+        obj.addDisplayMode(self.shaded, "Shaded")
+        style = coin.SoDrawStyle()
+        style.style = coin.SoDrawStyle.LINES
+        self.wireframe.addChild(style)
+        self.wireframe.addChild(self.scale)
+        self.wireframe.addChild(self.color)
+        self.wireframe.addChild(data)
+        obj.addDisplayMode(self.wireframe, "Wireframe")
+        self.onChanged(obj, "Color")
+ 
+    def updateData(self, fp, prop):
+        r"""If a property of the handled feature has changed,
+        we have the chance to handle this here
+        """
+        # fp is the handled feature,
+        # prop is the name of the property that has changed
+        l = fp.getPropertyByName("Length")
+        w = fp.getPropertyByName("Width")
+        h = fp.getPropertyByName("Height")
+        self.scale.scaleFactor.setValue(float(l), float(w), float(h))
+        pass
+ 
+    def getDisplayModes(self, obj):
+        r"""Return a list of display modes"""
+        modes = ["Shaded", "Wireframe"]
+        return modes
+ 
+    def getDefaultDisplayMode(self):
+        r"""Return the name of the default display mode.
+        It must be defined in getDisplayModes."""
+        return "Shaded"
+ 
+    def setDisplayMode(self, mode):
+        r"""Map the display mode defined in attach with those
+        defined in getDisplayModes.
+        Since they have the same names nothing needs to be done.
+        This method is optional
+        """
+        return mode
+ 
+    def onChanged(self, vp, prop):
+        r"""Here we can do something when a single property got changed"""
+        FreeCAD.Console.PrintMessage("Change property: " + str(prop) + "\n")
+        if prop == "Color":
+            c = vp.getPropertyByName("Color")
+            self.color.rgb.setValue(c[0], c[1], c[2])
+ 
+    def getIcon(self):
+        r"""Return the icon in XPM format which will appear in the tree view.
+        This method is\ optional and if not defined a default icon is shown.
+        """
+        return """
+            /* XPM */
+            static const char * ViewProviderBoat_xpm[] = {
+            "16 16 6 1",
+            "   c None",
+            ".  c #141010",
+            "+  c #615BD2",
+            "@  c #C39D55",
+            "#  c #000000",
+            "$  c #57C355",
+            "        ........",
+            "   ......++..+..",
+            "   .@@@@.++..++.",
+            "   .@@@@.++..++.",
+            "   .@@  .++++++.",
+            "  ..@@  .++..++.",
+            "###@@@@ .++..++.",
+            "##$.@@$#.++++++.",
+            "#$#$.$$$........",
+            "#$$#######      ",
+            "#$$#$$$$$#      ",
+            "#$$#$$$$$#      ",
+            "#$$#$$$$$#      ",
+            " #$#$$$$$#      ",
+            "  ##$$$$$#      ",
+            "   #######      "};
+            """
+ 
+    def __getstate__(self):
+        r"""When saving the document this object gets stored using
+        Python's json module.
+        Since we have some un-serializable parts here -- the Coin stuff --
+        we must define this method to return a tuple of all serializable objects
+        or None
+        """
+        return None
+ 
+    def __setstate__(self, state):
+        r"""When restoring the serialized object from document we have
+        the chance to set some internals here.
+        Since no data were serialized nothing needs to be done here.
+        """
+        return None
+
+
+def makeBoat():
+    FreeCAD.newDocument()
+    a = FreeCAD.ActiveDocument.addObject("App::FeaturePython", "Boat")
+    Boat(a)
+    ViewProviderBoat(a.ViewObject)
+
+
+makeBoat()
