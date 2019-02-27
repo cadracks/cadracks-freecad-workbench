@@ -4,7 +4,7 @@ r"""Anchorable object save"""
 
 from os import remove
 from os.path import join, dirname, splitext, basename
-
+import json
 import zipfile
 
 import FreeCAD as App
@@ -78,21 +78,36 @@ class CommandAnchorableObjectSave:
                 #  save shape as step
                 stepzip_path = dialog[0]
                 stepfile = splitext(stepzip_path)[0] + ".stp"
-                anchorsfile = splitext(stepzip_path)[0] + ".anchors"
+
+                # adaptation to json anchors + properties file format
+                # anchorsfile = splitext(stepzip_path)[0] + ".anchors"
+                anchorsfile = splitext(stepzip_path)[0] + ".json"
+
                 selected_object.Shape.exportStep(stepfile)
                 #  save anchors file (+ feature attachment)
 
                 # TODO : save more info about anchor (sub element link)
 
-                anchors_descs = []
+                # anchors_descs = []
+                # for anchor in selected_object.Anchors:
+                #     anchors_descs.append("%s %f,%f,%f,%f,%f,%f,%f,%f,%f" %
+                #                          (anchor.Label,
+                #                           anchor.p[0], anchor.p[1], anchor.p[2],
+                #                           anchor.u[0], anchor.u[1], anchor.u[2],
+                #                           anchor.v[0], anchor.v[1], anchor.v[2]))
+                # with open(anchorsfile, 'w') as f:
+                #     f.write("\n".join(anchors_descs))
+
+                # adaptation to json anchors + properties file format
+                json_content = {'anchors': {}, 'properties': {}}
                 for anchor in selected_object.Anchors:
-                    anchors_descs.append("%s %f,%f,%f,%f,%f,%f,%f,%f,%f" %
-                                        (anchor.Label,
-                                         anchor.p[0], anchor.p[1], anchor.p[2],
-                                         anchor.u[0], anchor.u[1], anchor.u[2],
-                                         anchor.v[0], anchor.v[1], anchor.v[2]))
-                with open(anchorsfile, 'w') as f:
-                    f.write("\n".join(anchors_descs))
+                    json_content['anchors'][anchor.Label] = {
+                        'p': [anchor.p[0], anchor.p[1], anchor.p[2]],
+                        'u': [anchor.u[0], anchor.u[1], anchor.u[2]],
+                        'v': [anchor.v[0], anchor.v[1], anchor.v[2]]}
+
+                with open(anchorsfile, 'w') as fp:
+                    json.dump(json_content, fp, indent=4)
 
                 #  zip it to a stepzip
                 create_stepzip(stepfile, anchorsfile)
